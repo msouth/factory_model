@@ -50,11 +50,14 @@ my $read_length = length( $sample_message );
 sub loop {
     my $self = shift;
     my %ws_by_id;
+    foreach my $ws (@{ $self->work_stations } ) {
+        unless ($ws_by_id{ $ws->id }) {
+            $ws_by_id{ $ws->id } = $ws;
+        }
+    }
+        
     while (1) {
         foreach my $ws (@{ $self->work_stations } ) {
-            unless ($ws_by_id{ $ws->id }) {
-                $ws_by_id{ $ws->id } = $ws;
-            }
             # check for messages
             my $read_from_child = $ws->call_mama()->[$READ];
             my $write_from_child = $ws->call_mama()->[$WRITE];
@@ -67,23 +70,25 @@ sub loop {
             die "I'm in [$$] and fileno(read_from_child) is undefined" unless defined fileno($read_from_child);
 
             vec($rin, fileno($read_from_child), 1) = 1;
-            my @messages = 0;
+            #my @messages = 0;
             my $thing; # part of the magic vec+select invocation...no idea
             while (select($thing=$rin,undef,undef,0)) {
                 sysread($read_from_child, my $the_message, $read_length);
                 if (length $the_message == $read_length) {
-                    my ($id, $sec, $musec, $what, $count) = split '<|>', $the_message;
-                    if (my $id_to_send_to = $ws->output_to) {
+                    my ($id, $sec, $musec, $what, $count) = split '\Q<|>', $the_message;
+                    #FIXME only sends to first output
+                    if (my $id_to_send_to = $ws->output_to->[0]) {
                         my $ws_to_send_to = $ws_by_id{$id_to_send_to};
                         syswrite( $ws_to_send_to->hear_mama->[$WRITE], $the_message );
                         # tell the $ws that it has new input;
                     }
+            #        push @messages, $the_message;
+                    #warn __PACKAGE__.':  '. $the_message;
+                    #warn "inventory on ws [". $ws->id . "] is ". $ws->inventory if $ws->input_from;
                 }
                 else {
                     #TODO at least warn dumper here so I can see how often and what happens
                 }
-                push @messages, $the_message;
-                warn __PACKAGE__.':  '. $the_message;
             }
 
             # relay 

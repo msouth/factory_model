@@ -70,7 +70,7 @@ sub work {
     while (1) {
         #warn "here is an example of process():". $self->process->();
         my $rin='';
-        my $read_from_parent = self->hear_mama->[$READ];
+        my $read_from_parent = $self->hear_mama->[$READ];
         die "I'm in [$$] and fileno(read_from_parent) is undefined" unless defined fileno($read_from_parent);
 
         vec($rin, fileno($read_from_parent), 1) = 1;
@@ -78,10 +78,12 @@ sub work {
         my $thing; # part of the magic vec+select invocation...no idea
         while (select($thing=$rin,undef,undef,0)) {
             sysread($read_from_parent, my $the_message, $read_length);
-            my ($id, $sec, $musec, $what, $count) = split '<|>', $the_message;
+            my ($id, $sec, $musec, $what, $count) = split /\Q<|>/, $the_message;
+            #warn "I am [". $self->id . "].  In the message, id is [$id], what is [$what], count is [$count] (message was [$the_message]";
             # we could check that it got to us correctly by checking that $id = $self->input_from;
             warn "what???? I got a message from $id but id is not in the self->input_from list [". join(' ', @{ $self->input_from }) unless grep {$id==$_} @{ $self->input_from };
             $self->inventory( $self->inventory() + $count );
+            warn $self->id. ": adding [$count] to inventory, it is now: ". $self->inventory;
         }
 
         my $i_have_inputs = scalar @{ $self->input_from };
@@ -95,7 +97,7 @@ sub work {
             }
             else {
                 #TODO set a timer and track idle time!
-                warn "I [". $self->id ."] just had an idle event!";
+                #LOTS of these warn "I [". $self->id ."] just had an idle event!";
             }
         }
         else {
