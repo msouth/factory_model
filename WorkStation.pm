@@ -113,7 +113,7 @@ sub _output_one_item {
     my $self = shift;
     my ($sec,$musec) = Time::HiRes::gettimeofday;
     my $line_to_write = join '<|>', sprintf('%06d', $self->id), $sec, sprintf('%06d',$musec), 'out', sprintf ('%06d', 1);
-    print __PACKAGE__. ": ". $line_to_write;
+#    print __PACKAGE__. ": ". $line_to_write;
     return $line_to_write;
 }
 
